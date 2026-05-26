@@ -265,29 +265,35 @@ const REGION_IMAGES = {"AP": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJwA
 
 // ── Functional network definitions (neuroanatomy knowledge) ─────────────────
 const NETWORKS = {
-  'Hunger & Satiety': {
+  'Appetite & Satiety': {
     color: '#f97316',
+    // hindbrain satiety relay, vagal motor output, energy-state sensing
     regions: ['NTS','AP','DMX','PVT','ARC','VMH','VMHdm','VMHvl','LHA','PVH'],
   },
-  'Reward & Motivation': {
+  'Reward & Aversion': {
     color: '#a855f7',
-    regions: ['CEA','CEAc','CEAl','CEAm','BST','VTA','NAc','ACB','SI','BAC'],
+    // valence coding, fear/reward learning, motivated behavior
+    regions: ['CEA','CEAc','CEAl','CEAm','BST','VTA','NAc','ACB','SI','BAC','SH','LSc'],
   },
-  'Thalamus': {
-    color: '#06b6d4',
-    regions: ['MD','IMD','PF','MED','VPMpc','PVT','CM','RH','Xi','IAD','IAM'],
-  },
-  'Prefrontal / Cortex': {
+  'Decision-making': {
     color: '#3b82f6',
-    regions: ['ORBm2/3','ORBm6b','ORBvl6a','FRP5','RSPv1','PL','ILA','ACA','MO'],
+    // value-based choice, cognitive control, working memory relay
+    regions: ['ORBm2/3','ORBm6b','ORBvl6a','FRP5','RSPv1','MD','IMD','PL','ILA','ACA'],
   },
-  'Brainstem / Autonomic': {
+  'Pain & Interoception': {
+    color: '#06b6d4',
+    // visceral sensation, nociception, sensory gating
+    regions: ['PB','PB_sub','VPMpc','PF','MED','NOT','PRT','NLL'],
+  },
+  'Arousal & Mood': {
     color: '#10b981',
-    regions: ['RPA','NLL','NOT','PB','PB_sub','PRT','LSc','SH','drt','cett','cm','ml'],
+    // serotonergic tone, sleep-wake balance, affective state
+    regions: ['RPA','IMD','RH'],
   },
-  'Cerebellum': {
+  'Motor & Coordination': {
     color: '#eab308',
-    regions: ['CUL','CUL4, 5','onl','py','pyd','In'],
+    // movement execution, motor tracts, cerebellar output
+    regions: ['CUL','CUL4, 5','py','pyd','ml','cm','drt','cett','In','onl'],
   },
 };
 
@@ -383,8 +389,8 @@ function render(allData) {
       gridcolor: '#f3f4f6', tickfont: { size: 11, color: '#6b7280' },
     },
     paper_bgcolor: 'white', plot_bgcolor: 'white',
-    legend: { orientation: 'v', x: 1.01, y: 1, xanchor: 'left', yanchor: 'top', font: { size: 10.5, color: '#374151' }, bgcolor: 'rgba(255,255,255,0.85)', bordercolor: '#e5e7eb', borderwidth: 1 },
-    margin: { t: 20, r: 160, b: 40, l: 56 },
+    legend: { orientation: 'v', x: 0.01, y: 0.38, xanchor: 'left', yanchor: 'top', font: { size: 10.5, color: '#374151' }, bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e5e7eb', borderwidth: 1 },
+    margin: { t: 20, r: 24, b: 40, l: 56 },
     annotations,
     font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
     hovermode: 'closest',
