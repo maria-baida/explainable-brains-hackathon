@@ -231,6 +231,11 @@ input[type=range]::-webkit-slider-thumb {
       <input type="text" class="search-box" id="search" placeholder="e.g. NTS, hypothalamus…">
     </div>
 
+    <div class="sidebar-section" id="network-legend">
+      <div class="section-label">Networks</div>
+      <div id="legend-items"></div>
+    </div>
+
   </div>
 
   <div class="main">
@@ -389,7 +394,7 @@ function render(allData) {
       gridcolor: '#f3f4f6', tickfont: { size: 11, color: '#6b7280' },
     },
     paper_bgcolor: 'white', plot_bgcolor: 'white',
-    legend: { orientation: 'v', x: 0.01, y: 0.38, xanchor: 'left', yanchor: 'top', font: { size: 10.5, color: '#374151' }, bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#e5e7eb', borderwidth: 1 },
+    showlegend: false,
     margin: { t: 20, r: 24, b: 40, l: 56 },
     annotations,
     font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
@@ -485,6 +490,22 @@ function init(data) {
 }
 
 init(VOLCANO_DATA);
+
+// ── Build sidebar legend ──────────────────────────────────────────────────────
+(function() {
+  const container = document.getElementById('legend-items');
+  // Not significant row
+  const rows = [{ label: 'Not significant', color: '#94a3b8' }];
+  for (const [name, def] of Object.entries(NETWORKS)) {
+    rows.push({ label: name, color: def.color });
+  }
+  rows.push({ label: 'Significant (unassigned)', color: '#e05c5c' });
+  container.innerHTML = rows.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+      <span style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:12px;color:#374151">${r.label}</span>
+    </div>`).join('');
+})();
 </script>
 </body>
 </html>
