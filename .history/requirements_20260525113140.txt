@@ -9,6 +9,7 @@ seaborn
 plotly
 scipy
 scikit-learn
+umap-learn
 tqdm
 Pillow
 streamlit

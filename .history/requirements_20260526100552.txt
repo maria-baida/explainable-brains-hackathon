@@ -9,6 +9,7 @@ seaborn
 plotly
 scipy
 scikit-learn
+umap-learn
 tqdm
 Pillow
 streamlit
@@ -20,4 +21,5 @@ anthropic
 openai
 jupyter
 ipywidgets
+numpy
 networkx
