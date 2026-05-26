@@ -74,7 +74,7 @@ TOOLS = [
                 },
                 "significant_only": {
                     "type": "boolean",
-                    "description": "If true, only return statistically significant regions (corrected p<0.05)"
+                    "description": "If true, only return statistically significant regions (uncorrected p<0.05). With 1356 regions tested, no region clears multiple-testing correction, so we use uncorrected p-values."
                 }
             },
             "required": ["direction"]
@@ -117,8 +117,10 @@ def execute_tool(name: str, inputs: dict, stats_df: pd.DataFrame, quant_df: pd.D
         sig_only = inputs.get("significant_only", False)
 
         df = stats_df.copy()
+        # Coerce the significance boolean (CSV loads it as float64 with NaNs)
+        df["significant_uncorrected"] = df["significant_uncorrected"].fillna(False).astype(bool)
         if sig_only:
-            df = df[df["significant_corrected"]]
+            df = df[df["significant_uncorrected"]]
 
         if direction == "up":
             df = df.nlargest(n, "log2_fold_change")
@@ -127,8 +129,8 @@ def execute_tool(name: str, inputs: dict, stats_df: pd.DataFrame, quant_df: pd.D
         else:
             df = df.reindex(df["log2_fold_change"].abs().nlargest(n).index)
 
-        cols = ["acronym", "region_name", "log2_fold_change", "p_corrected",
-                "significant_corrected", "mean_A", "mean_B", "hierarchy_level"]
+        cols = ["acronym", "region_name", "log2_fold_change", "p_value",
+                "significant_uncorrected", "mean_A", "mean_B", "hierarchy_level"]
         result = df[cols].round(4).to_dict(orient="records")
         return json.dumps(result, indent=2)
 
@@ -147,8 +149,11 @@ def execute_tool(name: str, inputs: dict, stats_df: pd.DataFrame, quant_df: pd.D
         return matches[cols].round(4).to_dict(orient="records").__str__()
 
     elif name == "get_summary_stats":
-        sig_corrected = int(stats_df["significant_corrected"].sum())
-        sig_uncorrected = int(stats_df["significant_uncorrected"].sum())
+        # Coerce significance columns to bool (CSV loads them as float64 with NaNs)
+        sig_corr = stats_df["significant_corrected"].fillna(False).astype(bool)
+        sig_uncorr = stats_df["significant_uncorrected"].fillna(False).astype(bool)
+        sig_corrected = int(sig_corr.sum())
+        sig_uncorrected = int(sig_uncorr.sum())
         n_animals = len(quant_df)
         n_g001 = int((quant_df["group_nr"] == "G001").sum())
         n_g002 = int((quant_df["group_nr"] == "G002").sum())
@@ -194,7 +199,71 @@ Be concise and scientifically accurate. Use log2 fold change and corrected p-val
 Positive log2FC = more activation in semaglutide mice. Negative = less activation."""
 
 
-# ── Main chat loop ────────────────────────────────────────────────────────────
+# ── Agentic turn — one user message in, one full assistant response out ──────
+def run_agent_turn(
+    client,
+    messages: list,
+    stats_df: pd.DataFrame,
+    quant_df: pd.DataFrame,
+) -> str:
+    """
+    Run one full agent turn against the latest user message in `messages`.
+
+    The function loops until Claude stops calling tools and returns plain text.
+    `messages` is mutated in-place — assistant responses and intermediate tool
+    results are appended so subsequent turns have the full conversation context.
+
+    Args:
+        client:    anthropic.Anthropic() instance
+        messages:  conversation history; last entry must be the new user message
+        stats_df:  statistics DataFrame (for tool execution)
+        quant_df:  quantification DataFrame (for tool execution)
+
+    Returns:
+        The assistant's final text response (concatenated across any text blocks).
+    """
+    collected_text = []
+
+    while True:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            tools=TOOLS,
+            messages=messages,
+        )
+
+        # Collect any text blocks Claude emitted this round
+        for block in response.content:
+            if block.type == "text":
+                collected_text.append(block.text)
+
+        # End of turn — append final assistant message and return
+        if response.stop_reason == "end_turn":
+            messages.append({"role": "assistant", "content": response.content})
+            return "".join(collected_text)
+
+        # Claude wants to call a tool — execute it and feed the result back
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    result = execute_tool(block.name, block.input, stats_df, quant_df)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": tool_results})
+            continue
+
+        # Any other stop_reason (e.g. max_tokens) — bail with what we have
+        messages.append({"role": "assistant", "content": response.content})
+        return "".join(collected_text)
+
+
+# ── Interactive CLI chat (uses run_agent_turn under the hood) ────────────────
 def chat(stats_df: pd.DataFrame, quant_df: pd.DataFrame):
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from environment
     messages = []
@@ -214,46 +283,8 @@ def chat(stats_df: pd.DataFrame, quant_df: pd.DataFrame):
             continue
 
         messages.append({"role": "user", "content": user_input})
-
-        # Agentic loop — keep going until Claude stops calling tools
-        while True:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=2048,
-                system=SYSTEM_PROMPT,
-                tools=TOOLS,
-                messages=messages
-            )
-
-            # Collect text output to display
-            text_parts = [b.text for b in response.content if b.type == "text"]
-            if text_parts:
-                print(f"\nClaude: {''.join(text_parts)}\n")
-
-            # Done — no more tool calls
-            if response.stop_reason == "end_turn":
-                messages.append({"role": "assistant", "content": response.content})
-                break
-
-            # Execute tool calls
-            if response.stop_reason == "tool_use":
-                tool_results = []
-                for block in response.content:
-                    if block.type == "tool_use":
-                        print(f"  [calling tool: {block.name}({json.dumps(block.input)[:80]}...)]")
-                        result = execute_tool(block.name, block.input, stats_df, quant_df)
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": result
-                        })
-
-                # Append assistant response + tool results, then loop
-                messages.append({"role": "assistant", "content": response.content})
-                messages.append({"role": "user", "content": tool_results})
-            else:
-                messages.append({"role": "assistant", "content": response.content})
-                break
+        response_text = run_agent_turn(client, messages, stats_df, quant_df)
+        print(f"\nClaude: {response_text}\n")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
