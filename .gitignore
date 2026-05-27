@@ -8,6 +8,15 @@ bucket_access/config.py
 *.nii.gz
 *.csv
 
+# exceptions: NIfTI files needed by the 3D brain viewer on Vercel
+!data_b/nifti/anatomy_small.nii.gz
+!data_b/nifti/overlay_appetite.nii.gz
+!data_b/nifti/overlay_arousal.nii.gz
+!data_b/nifti/overlay_decision.nii.gz
+!data_b/nifti/overlay_motor.nii.gz
+!data_b/nifti/overlay_pain.nii.gz
+!data_b/nifti/overlay_reward.nii.gz
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

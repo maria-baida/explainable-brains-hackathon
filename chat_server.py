@@ -26,6 +26,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 
@@ -39,9 +40,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve NIfTI / atlas files for the 3D brain viewer (matches Vercel's static path)
+if DATA_PATH.exists():
+    app.mount("/data_b", StaticFiles(directory=str(DATA_PATH)), name="data_b")
+
 REPO_ROOT = Path(__file__).resolve().parent
 HTML_PATH = REPO_ROOT / "volcano_mockup.html"
 STATS_PATH = REPO_ROOT / "data_b" / "statistics.csv"
+DATA_PATH = REPO_ROOT / "data_b"
 
 
 # ── Build system prompt once at startup ──────────────────────────────────────
