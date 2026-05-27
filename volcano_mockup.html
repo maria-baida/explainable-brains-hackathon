@@ -4,52 +4,91 @@
 <meta charset="UTF-8">
 <title>Brain Data Explorer</title>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@niivue/niivue@0.69.0/dist/niivue.umd.js"></script>
 <style>
+/* ── Cursor Design DNA ─────────────────────────────────────────────────────── */
+:root {
+  --bg:          #0c0c0c;
+  --bg-panel:    #111111;
+  --bg-raised:   #181818;
+  --bg-input:    #161616;
+  --border:      #242424;
+  --border-sub:  #1c1c1c;
+  --text-1:      #e8e8e8;
+  --text-2:      #aaaaaa;
+  --text-3:      #aaaaaa;
+  --accent:      #60a5fa;
+  --accent-dim:  rgba(96,165,250,.14);
+  --red:         #fb923c;
+  --up-color:    #fbbf24;
+  --down-color:  #67e8f9;
+  --radius-s:    3px;
+  --radius-m:    4px;
+  --radius-l:    6px;
+  --mono:        "SF Mono", "JetBrains Mono", "Menlo", monospace;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f0f0; color: #111; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
 
 /* ── Header ── */
 .header {
-  background: #111827;
-  color: white;
-  padding: 0 20px;
-  height: 48px;
+  background: var(--bg);
+  color: var(--text-1);
+  padding: 0 16px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid #1f2937;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
 }
-.header-icon { font-size: 20px; }
-.header-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
-.header-sub { font-size: 12px; color: #6b7280; margin-left: 4px; }
-.header-sep { color: #374151; margin: 0 4px; }
+.header-title { font-size: 13px; font-weight: 500; letter-spacing: -0.01em; color: var(--text-1); }
+.header-sub   { font-size: 11px; color: var(--text-3); margin-left: 2px; }
+.header-sep   { color: var(--border); margin: 0 2px; }
+
+/* ── App body (below header: nav + layout + stats) ── */
+.app-body {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 40px);
+  overflow: hidden;
+}
 
 /* ── Layout ── */
-.layout { display: flex; height: calc(100vh - 48px); }
+.layout { display: flex; flex: 1; min-height: 0; }
 
 /* ── Sidebar ── */
 .sidebar {
-  width: 240px;
-  min-width: 240px;
-  background: white;
-  border-right: 1px solid #e5e7eb;
+  width: 220px;
+  min-width: 220px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .sidebar-section {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 18px 16px 16px;
+  border-bottom: 1px solid var(--border-sub);
 }
 
 .section-label {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #6b7280;
-  margin-bottom: 10px;
+  color: var(--text-3);
+  margin-bottom: 12px;
 }
 
 /* Toggle row */
@@ -57,213 +96,433 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 0;
+  padding: 6px 0;
   cursor: pointer;
   user-select: none;
 }
 .toggle-label-text {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #374151;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--text-2);
 }
-.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.dot-sig   { background: #e05c5c; }
-.dot-unsig { background: #94a3b8; }
+.legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-sig    { background: var(--red); }
+.dot-unsig  { background: var(--text-3); }
 
-/* Felt-style toggle */
-.toggle { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
+/* Toggle */
+.toggle { position: relative; width: 28px; height: 16px; flex-shrink: 0; }
 .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
 .toggle-track {
   position: absolute; inset: 0;
-  background: #d1d5db; border-radius: 18px; transition: background .15s; cursor: pointer;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 16px; transition: background .12s, border-color .12s; cursor: pointer;
 }
 .toggle-thumb {
   position: absolute;
-  width: 12px; height: 12px;
-  background: white; border-radius: 50%;
-  top: 3px; left: 3px;
-  transition: transform .15s;
+  width: 10px; height: 10px;
+  background: var(--text-3); border-radius: 50%;
+  top: 2px; left: 2px;
+  transition: transform .12s, background .12s;
   pointer-events: none;
 }
-.toggle input:checked ~ .toggle-track { background: #111827; }
-.toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(14px); }
+.toggle input:checked ~ .toggle-track { background: #2a2a2a; border-color: #505050; }
+.toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(12px); background: var(--text-1); }
 
 /* Pill buttons */
 .pill-row { display: flex; gap: 4px; flex-wrap: wrap; }
 .pill {
-  padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500;
-  cursor: pointer; border: 1px solid #e5e7eb; background: white;
-  color: #374151; transition: all .12s; line-height: 1.4;
+  padding: 3px 9px; border-radius: var(--radius-s); font-size: 11px; font-weight: 400;
+  cursor: pointer; border: 1px solid var(--border); background: transparent;
+  color: var(--text-2); transition: all .1s; line-height: 1.5;
 }
-.pill:hover { border-color: #9ca3af; }
-.pill.active { background: #111827; color: white; border-color: #111827; }
+.pill:hover  { border-color: #383838; color: var(--text-1); background: var(--bg-raised); }
+.pill.active { background: var(--bg-raised); color: var(--text-1); border-color: #383838; }
 
 /* Sliders */
-.slider-group { margin-bottom: 10px; }
+.slider-group { margin-bottom: 14px; }
 .slider-group:last-child { margin-bottom: 0; }
-.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-.slider-lbl { font-size: 11px; color: #374151; }
-.slider-val { font-size: 11px; font-weight: 600; color: #111827; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.slider-lbl { font-size: 11px; color: var(--text-2); }
+.slider-val { font-size: 10.5px; font-weight: 500; color: var(--text-1); font-family: var(--mono); }
 input[type=range] {
-  width: 100%; height: 4px; accent-color: #111827;
+  width: 100%; height: 3px; accent-color: var(--text-1);
   -webkit-appearance: none; appearance: none;
-  background: #e5e7eb; border-radius: 4px; outline: none;
+  background: #303030; border-radius: 2px; outline: none;
 }
 input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 14px; height: 14px;
-  border-radius: 50%; background: #111827; cursor: pointer;
+  -webkit-appearance: none; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--text-1); cursor: pointer;
+  border: 2px solid var(--bg-panel);
+  box-shadow: 0 0 0 1px #444;
 }
 
 /* Search */
 .search-box {
-  width: 100%; padding: 7px 10px;
-  border: 1px solid #e5e7eb; border-radius: 5px;
-  font-size: 12px; color: #111827; outline: none;
-  transition: border .12s;
+  width: 100%; padding: 6px 9px;
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  font-size: 11.5px; color: var(--text-1); outline: none;
+  background: var(--bg-input); transition: border .1s;
 }
-.search-box:focus { border-color: #9ca3af; }
-.search-box::placeholder { color: #9ca3af; }
+.search-box:focus { border-color: #383838; }
+.search-box::placeholder { color: var(--text-3); }
 
 /* ── Main ── */
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: white; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
 #volcano { flex: 1; min-height: 0; }
+
+/* ── Chart tabs (above chart area inside .main) ── */
+.header-tabs {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.chart-tab {
+  padding: 8px 14px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .12s;
+  margin-bottom: -1px;
+}
+.chart-tab:hover  { color: var(--text-2); }
+.chart-tab.active { color: var(--text-1); border-bottom-color: var(--text-1); }
+#barchart { flex:1; min-height:0; }
 
 /* ── Stats bar ── */
 .stats-bar {
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  padding: 10px 20px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  padding: 8px 20px;
   display: flex;
   gap: 28px;
 }
 .stat-item { display: flex; flex-direction: column; }
-.stat-val { font-size: 18px; font-weight: 700; color: #111827; line-height: 1.2; }
-.stat-lbl { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; margin-top: 1px; }
+.stat-val {
+  font-size: 15px; font-weight: 600; color: var(--text-1); line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.stat-lbl {
+  font-size: 9px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-3); margin-top: 1px;
+}
 
 /* ── Tooltip ── */
 #tooltip {
   position: fixed; pointer-events: none;
-  background: white; border: 1px solid #e5e7eb;
-  border-radius: 6px; padding: 10px 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.10);
-  font-size: 11.5px; max-width: 260px; z-index: 1000;
-  display: none; line-height: 1.55;
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-m); padding: 10px 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  font-size: 11px; max-width: 240px; z-index: 1000;
+  display: none; line-height: 1.5;
 }
 #tooltip .tt-brain {
-  width: 100%; border-radius: 5px; margin-bottom: 7px;
-  display: block; background: #1a1a2e;
+  width: 100%; border-radius: var(--radius-s); margin-bottom: 7px;
+  display: block; background: #080810;
 }
-#tooltip .tt-name { font-weight: 700; font-size: 12.5px; color: #111827; margin-bottom: 4px; }
+#tooltip .tt-name { font-weight: 600; font-size: 12px; color: var(--text-1); margin-bottom: 4px; }
 #tooltip .tt-acr {
-  display: inline-block; background: #f3f4f6; color: #374151;
-  border-radius: 3px; padding: 1px 5px; font-size: 10px;
-  font-weight: 700; font-family: monospace; margin-bottom: 6px;
+  display: inline-block; background: var(--bg-input); color: var(--text-2);
+  border-radius: 2px; padding: 1px 5px; font-size: 10px;
+  font-weight: 600; font-family: var(--mono); margin-bottom: 6px;
+  border: 1px solid var(--border);
 }
-#tooltip .tt-divider { border: none; border-top: 1px solid #f3f4f6; margin: 6px 0; }
+#tooltip .tt-divider { border: none; border-top: 1px solid var(--border-sub); margin: 5px 0; }
 #tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; padding: 1px 0; }
-#tooltip .tt-key { color: #6b7280; }
-#tooltip .tt-val { font-weight: 600; color: #111827; }
+#tooltip .tt-key { color: var(--text-3); }
+#tooltip .tt-val { font-weight: 500; color: var(--text-1); font-family: var(--mono); font-size: 10.5px; }
 #tooltip .tt-badge {
-  margin-top: 5px; padding: 2px 7px; border-radius: 3px;
-  font-size: 10.5px; font-weight: 700; display: inline-block;
+  margin-top: 5px; padding: 2px 6px; border-radius: 2px;
+  font-size: 10px; font-weight: 600; display: inline-block;
 }
-#tooltip .badge-sig   { background: #fef2f2; color: #dc2626; }
-#tooltip .badge-unsig { background: #f9fafb; color: #6b7280; }
+#tooltip .badge-sig   { background: rgba(251,191,36,.1); color: #fbbf24; border: 1px solid rgba(251,191,36,.2); }
+#tooltip .badge-unsig { background: var(--bg-input); color: var(--text-3); border: 1px solid var(--border); }
 
-/* ── Chat panel (right side, mirrors the left sidebar) ── */
+/* ── Chat panel ── */
 .chat-panel {
-  width: 340px;
-  min-width: 340px;
-  background: white;
-  border-left: 1px solid #e5e7eb;
+  width: 320px;
+  min-width: 320px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 .chat-header {
-  padding: 14px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-1);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  height: 40px;
 }
-.chat-header-icon { font-size: 16px; }
-.chat-header-sub { font-size: 11px; color: #6b7280; font-weight: 400; margin-left: auto; }
+.chat-header-icon { font-size: 13px; }
+.chat-header-sub { font-size: 10px; color: var(--text-3); font-weight: 400; margin-left: auto; letter-spacing: .02em; }
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
+.chat-messages::-webkit-scrollbar { width: 3px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 .chat-hint {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11.5px;
+  color: var(--text-2);
   line-height: 1.7;
-  background: #f9fafb;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #f3f4f6;
+  background: var(--bg-raised);
+  padding: 9px 11px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
 }
-.chat-hint b { color: #374151; font-weight: 600; }
+.chat-hint b { color: var(--text-1); font-weight: 500; }
 .chat-msg {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.55;
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-m);
   max-width: 92%;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
 .chat-msg-user {
-  background: #111827;
-  color: white;
+  background: var(--bg-raised);
+  color: var(--text-1);
   align-self: flex-end;
+  border: 1px solid var(--border);
 }
 .chat-msg-assistant {
-  background: #f3f4f6;
-  color: #111827;
+  background: transparent;
+  color: var(--text-2);
   align-self: flex-start;
+  border: 1px solid var(--border-sub);
 }
-.chat-msg-loading { color: #6b7280; font-style: italic; }
+.chat-msg-loading { color: var(--text-3); font-style: italic; }
 .chat-input-row {
-  display: flex;
-  gap: 6px;
-  padding: 10px 12px;
-  border-top: 1px solid #f3f4f6;
-  background: #fafafa;
+  padding: 9px 11px;
+  border-top: 1px solid var(--border);
+  background: #111111;
+  position: relative;
 }
 .chat-input {
-  flex: 1;
-  padding: 8px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 5px;
+  width: 100%;
+  min-height: 42px;
+  max-height: 160px;
+  padding: 11px 42px 11px 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
   font-size: 12px;
+  line-height: 1.5;
   outline: none;
-  transition: border .12s;
-  background: white;
+  resize: none;
+  overflow-y: auto;
+  transition: border .1s, background .1s;
+  background: #202020;
+  color: var(--text-1);
+  font-family: inherit;
+  display: block;
 }
-.chat-input:focus { border-color: #9ca3af; }
-.chat-input::placeholder { color: #9ca3af; }
-.chat-send {
-  padding: 8px 14px;
-  background: #111827;
-  color: white;
+.chat-input:focus { border-color: #555555; background: #242424; }
+.chat-input::placeholder { color: var(--text-3); }
+
+
+/* network legend */
+#legend-items div { gap: 7px !important; padding: 3px 0 !important; }
+#legend-items span:first-child { width: 7px !important; height: 7px !important; }
+#legend-items span:last-child { font-size: 11px !important; color: var(--text-2) !important; }
+
+
+/* ── Copy button ── */
+.chat-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 3px 7px;
+  background: transparent;
   border: none;
-  border-radius: 5px;
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: var(--radius-s);
+  font-size: 10px;
+  color: var(--text-3);
   cursor: pointer;
-  transition: background .12s;
+  transition: color .1s;
+  font-family: inherit;
 }
-.chat-send:hover { background: #1f2937; }
-.chat-send:disabled { background: #9ca3af; cursor: not-allowed; }
+.chat-copy-btn:hover { color: var(--text-2); }
+.chat-copy-btn i { font-size: 11px; }
+
+/* ── Send icon button ── */
+.chat-send {
+  position: absolute;
+  right: 17px;
+  bottom: 17px;
+  top: auto;
+  transform: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: #e8e8e8;
+  color: #111111;
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.chat-send:hover { background: #ffffff; }
+.chat-send:disabled { opacity: 0.3; cursor: not-allowed; }
+/* ── Info icon ── */
+.info-icon {
+  font-size: 13px;
+  color: var(--text-3);
+  cursor: default;
+  vertical-align: middle;
+  margin-left: 3px;
+  opacity: 0.6;
+  transition: opacity .1s, color .1s;
+  line-height: 1;
+}
+.info-icon:hover { opacity: 1; color: var(--text-2); }
+
+/* ── Sidebar tooltip ── */
+#stip {
+  position: fixed;
+  z-index: 2000;
+  max-width: 220px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-2);
+  pointer-events: none;
+  display: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,.55);
+}
+#stip strong {
+  display: block;
+  color: var(--text-1);
+  font-weight: 600;
+  margin-bottom: 3px;
+  font-size: 11.5px;
+}
+
+/* ── 3D Brain Modal ── */
+#brain-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+#brain-modal.open { display: flex; }
+.brain-modal-box {
+  background: #111111;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  width: min(900px, 95vw);
+  height: min(600px, 90vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.7);
+}
+.brain-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+.brain-modal-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+.brain-modal-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.brain-modal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.brain-modal-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color .1s;
+}
+.brain-modal-close:hover { color: var(--text-1); }
+.brain-modal-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #1c1c1c;
+  flex-shrink: 0;
+}
+.brain-view-btn {
+  padding: 3px 10px;
+  font-size: 10.5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all .1s;
+  font-family: inherit;
+}
+.brain-view-btn:hover { border-color: #404040; color: var(--text-1); }
+.brain-view-btn.active { background: var(--bg-raised); color: var(--text-1); border-color: #404040; }
+.brain-modal-canvas-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+#brain-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.brain-modal-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-3);
+  background: #111;
+}
 </style>
 </head>
 <body>
@@ -273,15 +532,17 @@ input[type=range]::-webkit-slider-thumb {
   <span class="header-sep">·</span>
   <span class="header-sub">c-Fos · Semaglutide vs Vehicle · Mouse brain</span>
 </div>
+<div class="app-body">
+
+<div id="stip"></div>
 
 <div class="layout">
   <div class="sidebar">
 
     <div class="sidebar-section">
-      <div class="section-label">Visibility</div>
+      <div class="section-label">Visibility <span class="info-icon" data-tip="Show or hide non-significant regions. Hiding them reveals the significant hits more clearly."><i class="ph ph-info"></i></span></div>
       <label class="toggle-row" id="row-unsig">
         <span class="toggle-label-text">
-          <span class="legend-dot dot-unsig"></span>
           Not significant
         </span>
         <label class="toggle">
@@ -292,7 +553,7 @@ input[type=range]::-webkit-slider-thumb {
     </div>
 
     <div class="sidebar-section">
-      <div class="section-label">Labels</div>
+      <div class="section-label">Labels <span class="info-icon" data-tip="Choose which regions to label by name on the plot."><i class="ph ph-info"></i></span></div>
       <div class="pill-row">
         <button class="pill active" data-mode="sig">Significant</button>
         <button class="pill" data-mode="top10">Top 10 FC</button>
@@ -301,11 +562,11 @@ input[type=range]::-webkit-slider-thumb {
     </div>
 
     <div class="sidebar-section">
-      <div class="section-label">Thresholds</div>
+      <div class="section-label">Thresholds <span class="info-icon" data-tip="p-value: probability the result is due to chance (0.05 = 5%). Fold-change: how much more active a region is in semaglutide vs vehicle mice (log₂FC 1 = 2×, 2 = 4×)."><i class="ph ph-info"></i></span></div>
       <div class="slider-group">
         <div class="slider-header">
           <span class="slider-lbl">p-value cutoff</span>
-          <span class="slider-val" id="p-thresh-val">p &lt; 0.05</span>
+          <span class="slider-val" id="p-thresh-val">0.050</span>
         </div>
         <input type="range" id="p-thresh" min="1" max="5" step="0.5" value="1.301">
       </div>
@@ -319,42 +580,44 @@ input[type=range]::-webkit-slider-thumb {
     </div>
 
     <div class="sidebar-section">
-      <div class="section-label">Search region</div>
-      <input type="text" class="search-box" id="search" placeholder="e.g. NTS, hypothalamus…">
+      <div class="section-label">Region <span class="info-icon" data-tip="Highlight a specific brain region on the plot. Hover any chip to see the full name and biological role."><i class="ph ph-info"></i></span></div>
+      <div class="pill-row" id="region-chips">
+        <button class="pill active" data-region="">All</button>
+        <button class="pill" data-region="NTS">NTS</button>
+        <button class="pill" data-region="CEA">CEA</button>
+        <button class="pill" data-region="PB">PB</button>
+        <button class="pill" data-region="AP">AP</button>
+        <button class="pill" data-region="DMX">DMX</button>
+        <button class="pill" data-region="BST">BST</button>
+        <button class="pill" data-region="MD">MD</button>
+        <button class="pill" data-region="PF">PF</button>
+        <button class="pill" data-region="RPA">RPA</button>
+        <button class="pill" data-region="SH">SH</button>
+        <button class="pill" data-region="ORBm">ORBm</button>
+        <button class="pill" data-region="VPMpc">VPMpc</button>
+        <button class="pill" data-region="MED">MED</button>
+        <button class="pill" data-region="IMD">IMD</button>
+      </div>
     </div>
 
     <div class="sidebar-section" id="network-legend">
-      <div class="section-label">Networks</div>
+      <div class="section-label">Networks <span class="info-icon" data-tip="Brain regions grouped by functional role and color-coded on the plot. Hover each entry to learn more."><i class="ph ph-info"></i></span></div>
       <div id="legend-items"></div>
     </div>
 
   </div>
 
   <div class="main">
-    <div id="volcano"></div>
-    <div class="stats-bar">
-      <div class="stat-item">
-        <span class="stat-val" id="stat-total">—</span>
-        <span class="stat-lbl">Regions</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-val" id="stat-sig" style="color:#e05c5c">—</span>
-        <span class="stat-lbl">Significant</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-val" id="stat-up" style="color:#16a34a">—</span>
-        <span class="stat-lbl">Upregulated</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-val" id="stat-down" style="color:#2563eb">—</span>
-        <span class="stat-lbl">Downregulated</span>
-      </div>
+    <div class="chart-tabs header-tabs">
+      <button class="chart-tab active" data-chart="volcano">Volcano</button>
+      <button class="chart-tab" data-chart="bar">Top Regions</button>
     </div>
+    <div id="volcano"></div>
+    <div id="barchart" style="display:none"></div>
   </div>
 
   <div class="chat-panel">
     <div class="chat-header">
-      <span class="chat-header-icon">💬</span>
       <span>Ask the data</span>
       <span class="chat-header-sub">Claude · subscription</span>
     </div>
@@ -367,13 +630,34 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
     <div class="chat-input-row">
-      <input type="text" class="chat-input" id="chat-input"
-             placeholder="Ask about the brain data…" autocomplete="off">
-      <button class="chat-send" id="chat-send">Send</button>
+      <textarea class="chat-input" id="chat-input" rows="1"
+             placeholder="Ask about the brain data…" autocomplete="off"></textarea>
+      <button class="chat-send" id="chat-send"><i class="ph ph-arrow-up"></i></button>
     </div>
   </div>
 
+</div><!-- /.layout -->
+
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-val" id="stat-total">—</span>
+    <span class="stat-lbl">Regions</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-val" id="stat-sig" style="color:#a78bfa">—</span>
+    <span class="stat-lbl">Significant</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-val" id="stat-up" style="color:#fbbf24">—</span>
+    <span class="stat-lbl">Upregulated</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-val" id="stat-down" style="color:#67e8f9">—</span>
+    <span class="stat-lbl">Downregulated</span>
+  </div>
 </div>
+
+</div><!-- /.app-body -->
 
 <div id="tooltip"></div>
 
@@ -410,7 +694,7 @@ const NETWORKS = {
     regions: ['RPA','IMD','RH'],
   },
   'Motor & Coordination': {
-    color: '#eab308',
+    color: '#84cc16',
     // movement execution, motor tracts, cerebellar output
     regions: ['CUL','CUL4, 5','py','pyd','ml','cm','drt','cett','In','onl'],
   },
@@ -425,7 +709,7 @@ for (const [net, def] of Object.entries(NETWORKS)) {
 function getNetwork(d) { return ACRONYM_NETWORK[d.acronym] || null; }
 function getNetColor(d) {
   const net = getNetwork(d);
-  return net ? NETWORKS[net].color : '#e05c5c';
+  return net ? NETWORKS[net].color : '#fbbf24';
 }
 
 let state = {
@@ -434,10 +718,168 @@ let state = {
   search: '',
   pThresh: 1.301,
   fcThresh: 0,
+  chartView: 'volcano',
 };
 
 function isSig(d) {
   return d.neg_log10_p >= state.pThresh && Math.abs(d.log2_fold_change) >= state.fcThresh;
+}
+
+function renderBar(allData) {
+  const search = state.search.toLowerCase();
+  const pLabel  = (Math.pow(10, -state.pThresh)).toFixed(3);
+  const fcLabel = Math.pow(2, state.fcThresh).toFixed(2);
+
+  // Significant pool (respects p-thresh and fc-thresh sliders)
+  let sigPool = allData.filter(d => isSig(d));
+  if (search) {
+    sigPool = sigPool.filter(d =>
+      d.acronym.toLowerCase().includes(search) ||
+      d.region_name.toLowerCase().includes(search)
+    );
+  }
+
+  // Sort by |log2FC| descending, take top 30, reverse for bottom-to-top display
+  const sig = sigPool
+    .sort((a, b) => Math.abs(b.log2_fold_change) - Math.abs(a.log2_fold_change))
+    .slice(0, 30)
+    .reverse();
+
+  // When "show unsig" is on, also show the top 15 non-significant regions as gray background bars
+  let unsigRows = [];
+  if (state.showUnsig && !search) {
+    unsigRows = allData
+      .filter(d => !isSig(d))
+      .sort((a, b) => Math.abs(b.log2_fold_change) - Math.abs(a.log2_fold_change))
+      .slice(0, 15)
+      .reverse();
+  }
+
+  const sigColors = sig.map(d => {
+    const net = ACRONYM_NETWORK[d.acronym];
+    return net ? NETWORKS[net].color : (d.log2_fold_change > 0 ? '#fbbf24' : '#67e8f9');
+  });
+
+  const traces = [];
+
+  // Non-significant (background) trace
+  if (unsigRows.length > 0) {
+    traces.push({
+      type: 'bar', orientation: 'h', name: 'Not significant',
+      x: unsigRows.map(d => d.log2_fold_change),
+      y: unsigRows.map(d => d.acronym),
+      marker: { color: '#3a3a3a', opacity: 0.7, line: { width: 0 } },
+      customdata: unsigRows.map(d => [d.region_name, d.acronym, d.log2_fold_change, d.p_value]),
+      hovertemplate: '<b>%{customdata[0]}</b> (%{customdata[1]})<br>log₂FC: <b>%{x:.3f}</b><br>p = %{customdata[3]:.4f}<br><i>Not significant</i><extra></extra>',
+      showlegend: false,
+    });
+  }
+
+  // Empty-state trace (shown when no significant regions pass threshold)
+  if (sig.length === 0) {
+    const barEl = document.getElementById('barchart');
+    Plotly.react('barchart', [], {
+      paper_bgcolor: '#0c0c0c', plot_bgcolor: '#0c0c0c',
+      font: { color: '#aaaaaa', family: 'inherit', size: 11 },
+      margin: { l: 72, r: 48, t: 48, b: 56 },
+      xaxis: { visible: false }, yaxis: { visible: false },
+      annotations: [{
+        x: 0.5, y: 0.5, xref: 'paper', yref: 'paper',
+        text: `No significant regions at p < ${pLabel}, |FC| ≥ ${fcLabel}×<br><span style="font-size:10px">Loosen the threshold sliders to see results</span>`,
+        showarrow: false, font: { size: 13, color: '#666' }, xanchor: 'center', yanchor: 'middle',
+      }],
+    }, { responsive: true, displayModeBar: false });
+    if (!barEl._brainClickAttached) {
+      barEl._brainClickAttached = true;
+      barEl.on('plotly_click', evt => {
+        if (!evt.points?.[0]?.customdata) return;
+        const acr = evt.points[0].customdata[1];
+        const net = ACRONYM_NETWORK[acr];
+        if (net && window.openBrainModal) window.openBrainModal(net, NETWORKS[net].color);
+      });
+    }
+    return;
+  }
+
+  // Significant trace
+  traces.push({
+    type: 'bar', orientation: 'h', name: 'Significant',
+    x: sig.map(d => d.log2_fold_change),
+    y: sig.map(d => d.acronym),
+    marker: { color: sigColors, opacity: 0.85, line: { width: 0 } },
+    customdata: sig.map(d => [d.region_name, d.acronym, d.log2_fold_change, d.p_value]),
+    hovertemplate: '<b>%{customdata[0]}</b> (%{customdata[1]})<br>log₂FC: <b>%{x:.3f}</b><br>p = %{customdata[3]:.4f}<extra></extra>',
+    showlegend: false,
+  });
+
+  const allRows = unsigRows.concat(sig);
+  const subtitle = sigPool.length > 30
+    ? `top 30 of ${sigPool.length} regions  ·  p < ${pLabel}  ·  |FC| ≥ ${fcLabel}×`
+    : `${sig.length} region${sig.length !== 1 ? 's' : ''}  ·  p < ${pLabel}  ·  |FC| ≥ ${fcLabel}×`;
+
+  const layout = {
+    paper_bgcolor: '#0c0c0c',
+    plot_bgcolor:  '#0c0c0c',
+    font: { color: '#aaaaaa', family: 'inherit', size: 11 },
+    margin: { l: 72, r: 48, t: 76, b: 68 },
+    barmode: 'overlay',
+    xaxis: {
+      title: { text: 'log₂ Fold Change (Semaglutide / Vehicle)', font: { size: 11 } },
+      zeroline: true, zerolinecolor: '#383838', zerolinewidth: 1,
+      gridcolor: '#1c1c1c', tickfont: { size: 10 },
+    },
+    yaxis: {
+      tickfont: { size: 10.5, color: '#aaaaaa' },
+      gridcolor: 'transparent',
+    },
+    bargap: 0.28,
+    shapes: [{
+      type: 'line', x0: 0, x1: 0,
+      y0: -0.5, y1: allRows.length - 0.5,
+      line: { color: '#404040', width: 1, dash: 'dot' },
+    }],
+    annotations: [
+      // All three labels share one row just above the plot (y=1.0, yanchor bottom)
+      {
+        x: 0.0, y: 1.06, xref: 'paper', yref: 'paper',
+        text: '← Higher in Vehicle',
+        showarrow: false, font: { size: 9.5, color: '#67e8f9' },
+        xanchor: 'left', yanchor: 'bottom',
+      },
+      {
+        x: 0.5, y: 1.06, xref: 'paper', yref: 'paper',
+        text: subtitle,
+        showarrow: false, font: { size: 9.5, color: '#606060' },
+        xanchor: 'center', yanchor: 'bottom',
+      },
+      {
+        x: 1.0, y: 1.06, xref: 'paper', yref: 'paper',
+        text: 'Higher in Semaglutide →',
+        showarrow: false, font: { size: 9.5, color: '#fbbf24' },
+        xanchor: 'right', yanchor: 'bottom',
+      },
+    ],
+  };
+
+  // Update stats bar (same data, respecting current filters)
+  const allSig = allData.filter(d => isSig(d));
+  document.getElementById('stat-total').textContent = allData.length;
+  document.getElementById('stat-sig').textContent   = allSig.length;
+  document.getElementById('stat-up').textContent    = allSig.filter(d => d.log2_fold_change > 0).length;
+  document.getElementById('stat-down').textContent  = allSig.filter(d => d.log2_fold_change < 0).length;
+
+  const barEl = document.getElementById('barchart');
+  Plotly.react('barchart', traces, layout, { responsive: true, displayModeBar: false });
+
+  if (!barEl._brainClickAttached) {
+    barEl._brainClickAttached = true;
+    barEl.on('plotly_click', evt => {
+      if (!evt.points?.[0]?.customdata) return;
+      const acr = evt.points[0].customdata[1];
+      const net = ACRONYM_NETWORK[acr];
+      if (net && window.openBrainModal) window.openBrainModal(net, NETWORKS[net].color);
+    });
+  }
 }
 
 function render(allData) {
@@ -483,15 +925,15 @@ function render(allData) {
   const unassigned = sigPts.filter(d => !getNetwork(d));
 
   const traces = [
-    makeTrace(unsigPts,  'Not significant', '#94a3b8', 6, 0.45, false),
-    makeTrace(unassigned,'Significant',     '#e05c5c', 9, 0.85, false),
+    makeTrace(unsigPts,  'Not significant', '#555555', 6, 0.6, false),
+    makeTrace(unassigned,'Significant',     '#fbbf24', 9, 0.9, false),
     ...networkTraces,
   ].filter(t => t.x.length > 0);
 
   const annotations = labelPts.map(d => ({
     x: d.log2_fold_change, y: d.neg_log10_p,
     text: d.acronym, showarrow: false,
-    font: { size: 9.5, color: '#111827', family: 'monospace' },
+    font: { size: 9.5, color: '#888888', family: '"SF Mono","JetBrains Mono","Menlo",monospace' },
     xshift: d.log2_fold_change > 0 ? 11 : -11,
     yshift: 3,
     xanchor: d.log2_fold_change > 0 ? 'left' : 'right',
@@ -499,19 +941,19 @@ function render(allData) {
 
   const layout = {
     xaxis: {
-      title: { text: 'log₂ Fold Change (Semaglutide / Vehicle)', font: { size: 12, color: '#374151' } },
-      zeroline: true, zerolinecolor: '#9ca3af', zerolinewidth: 1,
-      gridcolor: '#f3f4f6', tickfont: { size: 11, color: '#6b7280' },
+      title: { text: 'log₂ Fold Change (Semaglutide / Vehicle)', font: { size: 11, color: '#aaaaaa' } },
+      zeroline: true, zerolinecolor: '#2a2a2a', zerolinewidth: 1,
+      gridcolor: '#1c1c1c', tickfont: { size: 10, color: '#888888' },
     },
     yaxis: {
-      title: { text: '−log₁₀(p value)', font: { size: 12, color: '#374151' } },
-      gridcolor: '#f3f4f6', tickfont: { size: 11, color: '#6b7280' },
+      title: { text: '−log₁₀(p value)', font: { size: 11, color: '#aaaaaa' } },
+      gridcolor: '#1c1c1c', tickfont: { size: 10, color: '#888888' },
     },
-    paper_bgcolor: 'white', plot_bgcolor: 'white',
+    paper_bgcolor: '#0c0c0c', plot_bgcolor: '#0c0c0c',
     showlegend: false,
-    margin: { t: 20, r: 24, b: 40, l: 56 },
+    margin: { t: 44, r: 48, b: 68, l: 72 },
     annotations,
-    font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+    font: { color: '#aaaaaa', family: 'inherit', size: 11 },
     hovermode: 'closest',
   };
 
@@ -524,6 +966,11 @@ function render(allData) {
   document.getElementById('stat-down').textContent  = shown.filter(d => d.log2_fold_change < 0).length;
 }
 
+function redraw(data) {
+  if (state.chartView === 'bar') renderBar(data);
+  else render(data);
+}
+
 function init(data) {
   render(data);
 
@@ -533,7 +980,7 @@ function init(data) {
     const tt = document.getElementById('tooltip');
     const up = lfc > 0;
     const dir = up ? '▲ Higher in Semaglutide' : '▼ Lower in Semaglutide';
-    const dirCol = up ? '#dc2626' : '#2563eb';
+    const dirCol = up ? '#fbbf24' : '#67e8f9';
     const imgTag = REGION_IMAGES[acr]
       ? `<img class="tt-brain" src="${REGION_IMAGES[acr]}" alt="${acr}">`
       : '';
@@ -562,6 +1009,33 @@ function init(data) {
     document.getElementById('tooltip').style.display = 'none';
   });
 
+  // Chart view toggle (tabs live in header)
+  document.querySelector('.header-tabs').addEventListener('click', e => {
+    const btn = e.target.closest('.chart-tab');
+    if (!btn) return;
+    state.chartView = btn.dataset.chart;
+    document.querySelectorAll('.chart-tab').forEach(b => b.classList.toggle('active', b === btn));
+    const isVolcano = state.chartView === 'volcano';
+    document.getElementById('volcano').style.display  = isVolcano ? '' : 'none';
+    document.getElementById('barchart').style.display = isVolcano ? 'none' : '';
+    if (!isVolcano) renderBar(VOLCANO_DATA);
+  });
+
+  document.getElementById('volcano').on('plotly_click', evt => {
+    if (!evt.points || !evt.points[0]) return;
+    const pt = evt.points[0];
+    const d  = pt.customdata;
+    if (!d) return;
+    // customdata layout: [region_name, acronym, logFC, ...]
+    const acr = d[1] || d[0];
+    // Find the network for this region
+    const net = (typeof ACRONYM_NETWORK !== 'undefined') ? ACRONYM_NETWORK[acr] : null;
+    if (net && window.openBrainModal) {
+      const color = NETWORKS[net] ? NETWORKS[net].color : '#fbbf24';
+      window.openBrainModal(net, color);
+    }
+  });
+
   document.addEventListener('mousemove', e => {
     const tt = document.getElementById('tooltip');
     if (tt.style.display === 'none') return;
@@ -572,7 +1046,7 @@ function init(data) {
   });
 
   document.getElementById('show-unsig').addEventListener('change', e => {
-    state.showUnsig = e.target.checked; render(data);
+    state.showUnsig = e.target.checked; redraw(data);
   });
 
   document.querySelectorAll('.pill').forEach(btn => {
@@ -580,26 +1054,32 @@ function init(data) {
       document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.labelMode = btn.dataset.mode;
-      render(data);
+      redraw(data);
     });
   });
 
   document.getElementById('p-thresh').addEventListener('input', e => {
     state.pThresh = parseFloat(e.target.value);
     const pRaw = Math.pow(10, -state.pThresh);
-    document.getElementById('p-thresh-val').textContent = `p < ${pRaw.toFixed(3)}`;
-    render(data);
+    document.getElementById('p-thresh-val').textContent = pRaw.toFixed(3);
+    redraw(data);
   });
 
   document.getElementById('fc-thresh').addEventListener('input', e => {
     state.fcThresh = parseFloat(e.target.value);
     const fc = Math.pow(2, state.fcThresh).toFixed(2);
     document.getElementById('fc-thresh-val').textContent = `≥ ${fc}×`;
-    render(data);
+    redraw(data);
   });
 
-  document.getElementById('search').addEventListener('input', e => {
-    state.search = e.target.value; render(data);
+  // Region chip pills
+  document.getElementById('region-chips').addEventListener('click', e => {
+    const btn = e.target.closest('[data-region]');
+    if (!btn) return;
+    document.querySelectorAll('#region-chips .pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    state.search = btn.dataset.region;
+    redraw(data);
   });
 }
 
@@ -607,38 +1087,161 @@ init(VOLCANO_DATA);
 
 // ── Build sidebar legend ──────────────────────────────────────────────────────
 (function() {
+  const NETWORK_TIPS = {
+    'Not significant': 'Regions that did not reach the significance threshold. Shown as dim dots in the background.',
+    'Appetite & Satiety': 'Regions directly involved in hunger, fullness and food intake — the primary targets of GLP-1 receptor agonists like semaglutide.',
+    'Reward & Aversion': 'Regions encoding whether food (or other stimuli) feels rewarding or aversive. Semaglutide may reduce food reward through these areas.',
+    'Decision-making': 'Cortical and thalamic regions evaluating options and planning actions. May underlie changes in food-related choices under semaglutide.',
+    'Pain & Interoception': 'Regions sensing body state: pain, temperature and organ fullness. They connect peripheral signals to conscious bodily perception.',
+    'Arousal & Mood': 'Regions controlling wakefulness, attention and emotional tone. Activation here may relate to mood effects or nausea from semaglutide.',
+    'Motor & Coordination': 'Cerebellar and brainstem regions coordinating movement. Activation may reflect nausea-related motor responses.',
+    'Significant (unassigned)': 'Significant regions not yet assigned to a functional network. May represent novel or understudied semaglutide targets.',
+  };
   const container = document.getElementById('legend-items');
-  // Not significant row
-  const rows = [{ label: 'Not significant', color: '#94a3b8' }];
+  const rows = [{ label: 'Not significant', color: '#555555' }];
   for (const [name, def] of Object.entries(NETWORKS)) {
     rows.push({ label: name, color: def.color });
   }
-  rows.push({ label: 'Significant (unassigned)', color: '#e05c5c' });
-  container.innerHTML = rows.map(r => `
-    <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+  rows.push({ label: 'Significant (unassigned)', color: '#fbbf24' });
+  container.innerHTML = rows.map(r => {
+    const tip = NETWORK_TIPS[r.label] ? `data-tip="<strong>${r.label}</strong>${NETWORK_TIPS[r.label]}"` : '';
+    return `
+    <div ${tip} style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:default">
       <span style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0;display:inline-block"></span>
-      <span style="font-size:12px;color:#374151">${r.label}</span>
-    </div>`).join('');
+      <span style="font-size:11px;color:#888888">${r.label}</span>
+    </div>`;
+  }).join('');
+})();
+
+// ── Sidebar tooltip engine ────────────────────────────────────────────────────
+(function() {
+  const tip = document.getElementById('stip');
+  let hideTimer;
+
+  document.querySelector('.sidebar').addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (!el) { hideTip(); return; }
+    clearTimeout(hideTimer);
+    tip.innerHTML = el.dataset.tip;
+    tip.style.display = 'block';
+    positionTip(e);
+  });
+
+  document.querySelector('.sidebar').addEventListener('mousemove', e => {
+    if (tip.style.display === 'block') positionTip(e);
+  });
+
+  document.querySelector('.sidebar').addEventListener('mouseout', e => {
+    if (!e.target.closest('[data-tip]')) return;
+    hideTimer = setTimeout(hideTip, 120);
+  });
+
+  function hideTip() { tip.style.display = 'none'; }
+
+  function positionTip(e) {
+    const margin = 12;
+    const tw = 220, th = tip.offsetHeight || 80;
+    let x = e.clientX + margin;
+    let y = e.clientY - 10;
+    if (x + tw > window.innerWidth - 8) x = e.clientX - tw - margin;
+    if (y + th > window.innerHeight - 8) y = window.innerHeight - th - 8;
+    tip.style.left = x + 'px';
+    tip.style.top  = y + 'px';
+  }
 })();
 </script>
 <script>
 /* ── Chat behavior ─────────────────────────────────────────────────────── */
 (function initChat() {
   const input  = document.getElementById('chat-input');
+
+  // Auto-resize textarea
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  });
   const send   = document.getElementById('chat-send');
   const stream = document.getElementById('chat-messages');
 
   function append(role, text, opts = {}) {
-    // Hide the welcome hint once the user starts chatting
     const hint = stream.querySelector('.chat-hint');
     if (hint) hint.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = role === 'user' ? 'flex-end' : 'flex-start';
 
     const div = document.createElement('div');
     div.className = 'chat-msg chat-msg-' + role + (opts.loading ? ' chat-msg-loading' : '');
     div.textContent = text;
-    stream.appendChild(div);
+    wrapper.appendChild(div);
+
+    if (role === 'assistant' && !opts.loading) {
+      const btn = document.createElement('button');
+      btn.className = 'chat-copy-btn';
+      btn.innerHTML = '<i class="ph ph-copy"></i> Copy';
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => {
+          btn.innerHTML = '<i class="ph ph-check"></i> Copied';
+          setTimeout(() => { btn.innerHTML = '<i class="ph ph-copy"></i> Copy'; }, 1800);
+        });
+      });
+      wrapper.appendChild(btn);
+    }
+
+    stream.appendChild(wrapper);
     stream.scrollTop = stream.scrollHeight;
     return div;
+  }
+
+
+  async function generateReport(responseText) {
+    // Capture the current volcano plot as a PNG
+    let plotImg = '';
+    try {
+      plotImg = await Plotly.toImage('volcano', { format: 'png', width: 960, height: 560 });
+    } catch(e) { plotImg = ''; }
+
+    const now = new Date().toLocaleString();
+    const reportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Brain Data Report</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 820px; margin: 40px auto; padding: 0 28px; color: #1a1a1a; line-height: 1.6; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .meta { font-size: 12px; color: #888; margin-bottom: 28px; }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: #aaa; margin-bottom: 10px; }
+  .response { font-size: 14px; line-height: 1.7; white-space: pre-wrap; background: #f9f9f9; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px 20px; }
+  .plot-wrap img { width: 100%; border-radius: 6px; border: 1px solid #e5e5e5; margin-top: 8px; }
+  .footer { margin-top: 32px; font-size: 11px; color: #bbb; border-top: 1px solid #eee; padding-top: 12px; }
+</style>
+</head>
+<body>
+  <h1>Brain Data Explorer — Report</h1>
+  <div class="meta">c-Fos · Semaglutide (G002) vs Vehicle (G001) · Mouse brain &nbsp;·&nbsp; Generated \${now}</div>
+
+  <div class="section-title">Analysis</div>
+  <div class="response">\${responseText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+
+  \${plotImg ? \`<div class="plot-wrap">
+    <div class="section-title" style="margin-top:28px">Volcano Plot</div>
+    <img src="\${plotImg}" alt="Volcano plot">
+  </div>\` : ''}
+
+  <div class="footer">Brain Data Explorer · Explainable Brains Hackathon</div>
+</body>
+</html>`;
+
+        const blob = new Blob([reportHtml], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'brain-data-report.html';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   async function sendMessage() {
@@ -647,13 +1250,14 @@ init(VOLCANO_DATA);
 
     append('user', text);
     input.value = '';
+    input.style.height = 'auto';
     input.disabled = true;
     send.disabled = true;
 
     const loading = append('assistant', 'Asking Claude…', { loading: true });
 
     try {
-      const resp = await fetch('/chat', {
+      const resp = await fetch('http://localhost:8000/chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ message: text }),
@@ -668,8 +1272,7 @@ init(VOLCANO_DATA);
       }
     } catch (err) {
       loading.remove();
-      append('assistant', 'Network error: ' + err.message
-        + '\n\nIs chat_server.py running? Start it with: python chat_server.py');
+      append('assistant', 'Could not reach chat server.\n\nRun in terminal:\n/Users/susles/explainable-brains-hackathon/.venv/bin/python /Users/susles/b2/chat_server.py');
     } finally {
       input.disabled = false;
       send.disabled = false;
@@ -683,7 +1286,167 @@ init(VOLCANO_DATA);
       e.preventDefault();
       sendMessage();
     }
+    // Shift+Enter adds a newline (default textarea behavior)
   });
+})();
+</script>
+
+
+<!-- 3D Brain Modal -->
+<div id="brain-modal">
+  <div class="brain-modal-box">
+    <div class="brain-modal-header">
+      <span class="brain-modal-dot" id="brain-modal-dot"></span>
+      <span class="brain-modal-title" id="brain-modal-title">Brain Network View</span>
+      <span class="brain-modal-sub" id="brain-modal-sub"></span>
+      <button class="brain-modal-close" id="brain-modal-close"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="brain-modal-toolbar">
+      <button class="brain-view-btn active" data-view="axial">Axial</button>
+      <button class="brain-view-btn" data-view="coronal">Coronal</button>
+      <button class="brain-view-btn" data-view="sagittal">Sagittal</button>
+      <button class="brain-view-btn" data-view="3d">3D</button>
+      <button class="brain-view-btn" data-view="multi">Multi</button>
+    </div>
+    <div class="brain-modal-canvas-wrap">
+      <div class="brain-modal-loading" id="brain-loading">Loading brain volume…</div>
+      <canvas id="brain-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── 3D Brain Viewer ─────────────────────────────────────────────────────── */
+(function() {
+  const NETWORK_CONFIG = {
+    'Appetite & Satiety':   { overlay: 'overlay_appetite.nii.gz',  colormap: 'warm'   },
+    'Reward & Aversion':    { overlay: 'overlay_reward.nii.gz',    colormap: 'violet' },
+    'Decision-making':      { overlay: 'overlay_decision.nii.gz',  colormap: 'blue'   },
+    'Pain & Interoception': { overlay: 'overlay_pain.nii.gz',      colormap: 'cool'   },
+    'Arousal & Mood':       { overlay: 'overlay_arousal.nii.gz',   colormap: 'green'  },
+    'Motor & Coordination': { overlay: 'overlay_motor.nii.gz',     colormap: 'gold'   },
+  };
+
+  const BASE = 'http://localhost:7432/data_b/nifti/';
+  let nv = null;
+  let currentNetwork = null;
+
+  const modal   = document.getElementById('brain-modal');
+  const closeBtn= document.getElementById('brain-modal-close');
+  const loading = document.getElementById('brain-loading');
+  const canvas  = document.getElementById('brain-canvas');
+  const titleEl = document.getElementById('brain-modal-title');
+  const subEl   = document.getElementById('brain-modal-sub');
+  const dotEl   = document.getElementById('brain-modal-dot');
+
+  closeBtn.addEventListener('click', () => { modal.classList.remove('open'); });
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.classList.remove('open');
+  });
+
+  const SLICE_TYPE = { axial: 0, coronal: 1, sagittal: 2, '3d': 4, multi: 3 };
+  document.querySelector('.brain-modal-toolbar').addEventListener('click', e => {
+    const btn = e.target.closest('.brain-view-btn');
+    if (!btn || !nv) return;
+    document.querySelectorAll('.brain-view-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const type = SLICE_TYPE[btn.dataset.view];
+    const is3D = (type === 4);
+    // Anatomy: nearly invisible in 3D so coloured overlay pops; solid in slice views
+    if (nv.volumes && nv.volumes[0]) {
+      nv.volumes[0].opacity = is3D ? 0.08 : 1.0;
+    }
+    // Overlay: fully visible always
+    if (nv.volumes && nv.volumes[1]) {
+      nv.volumes[1].opacity = is3D ? 0.95 : 0.85;
+    }
+    if (is3D) nv.opts.show3Dcrosshair = false;
+    nv.updateGLVolume();
+    nv.setSliceType(type);
+  });
+
+  function waitForCanvasSize(el, timeout) {
+    timeout = timeout || 2000;
+    return new Promise(function(resolve, reject) {
+      var start = Date.now();
+      function check() {
+        var w = el.parentElement ? el.parentElement.clientWidth  : el.offsetWidth;
+        var h = el.parentElement ? el.parentElement.clientHeight : el.offsetHeight;
+        if (w > 0 && h > 0) { resolve({ w: w, h: h }); return; }
+        if (Date.now() - start > timeout) { reject(new Error('Canvas never got dimensions')); return; }
+        requestAnimationFrame(check);
+      }
+      requestAnimationFrame(check);
+    });
+  }
+
+  async function openNetwork(networkName, color) {
+    modal.classList.add('open');
+    titleEl.textContent    = networkName;
+    subEl.textContent      = 'c-Fos activation \u00b7 Semaglutide vs Vehicle';
+    dotEl.style.background = color;
+    loading.style.display  = 'flex';
+    loading.textContent    = 'Loading brain atlas\u2026';
+
+    if (currentNetwork === networkName && nv) {
+      loading.style.display = 'none';
+      return;
+    }
+    currentNetwork = networkName;
+
+    if (nv) { try { nv.closeDrawing(); } catch(e) {} nv = null; }
+
+    const cfg = NETWORK_CONFIG[networkName];
+    if (!cfg) { loading.textContent = 'No data for this network.'; return; }
+
+    try {
+      const { w, h } = await waitForCanvasSize(canvas);
+      canvas.width  = w;
+      canvas.height = h;
+
+      nv = new niivue.Niivue({
+        backColor:       [0.05, 0.05, 0.05, 1],
+        show3Dcrosshair: false,
+        isColorbar:      false,
+        isOrientCube:    false,
+        logging:         false,
+      });
+
+      await nv.attachToCanvas(canvas);
+
+      // anatomy at very low opacity — acts as a ghost shell in 3D render
+      // overlay at high opacity — the vivid coloured region
+      await nv.loadVolumes([
+        {
+          url:      BASE + 'anatomy_small.nii.gz',
+          colormap: 'gray',
+          opacity:  0.25,   // ghost brain shell in 3D render
+          cal_min:  20,
+          cal_max:  235,
+        },
+        {
+          url:      BASE + cfg.overlay,
+          colormap: cfg.colormap,
+          opacity:  0.95,
+          cal_min:  0.5,
+          cal_max:  1.0,
+        },
+      ]);
+
+      loading.style.display = 'none';
+
+      // Default to 3D atlas view
+      nv.setSliceType(4);
+      document.querySelectorAll('.brain-view-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.view === '3d')
+      );
+    } catch(err) {
+      loading.textContent = 'Error: ' + err.message;
+      console.error('Brain viewer error:', err);
+    }
+  }
+
+  window.openBrainModal = openNetwork;
 })();
 </script>
 
